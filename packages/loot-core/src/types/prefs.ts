@@ -10,7 +10,8 @@ export type FeatureFlag =
   | 'enableBanking'
   | 'sankeyReport'
   | 'akahuBankSync'
-  | 'mobileCalculator';
+  | 'mobileCalculator'
+  | 'groupBudgeting';
 
 /**
  * Cross-device preferences. These sync across devices when they are changed.
@@ -55,6 +56,9 @@ export type SyncedPrefs = Partial<
     | `camt-swap-payee-memo-${string}`
     | `flip-amount-${string}-${'csv' | 'qif'}`
     | `flags.${FeatureFlag}`
+    // Maps a category group id to the id of its Held Category, the only
+    // reliable way to identify one.
+    | `group-budget-held-${string}`
     | `learn-categories`
     | `show-hidden-tags`,
     string

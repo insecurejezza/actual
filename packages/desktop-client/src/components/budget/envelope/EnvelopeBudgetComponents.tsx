@@ -23,6 +23,7 @@ import { CellValue, CellValueText } from '#components/spreadsheet/CellValue';
 import { Field, Row, SheetCell } from '#components/table';
 import type { SheetCellProps } from '#components/table';
 import { useCategoryScheduleGoalTemplateIndicator } from '#hooks/useCategoryScheduleGoalTemplateIndicator';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useFormat } from '#hooks/useFormat';
 import { useNavigate } from '#hooks/useNavigate';
 import { useSheetName } from '#hooks/useSheetName';
@@ -34,6 +35,7 @@ import type { CategoryGroupMonthProps, CategoryMonthProps } from '..';
 
 import { BalanceMovementMenu } from './BalanceMovementMenu';
 import { BudgetMenu } from './BudgetMenu';
+import { EnvelopeGroupBudgetedCell } from './EnvelopeGroupBudgetedCell';
 import { IncomeMenu } from './IncomeMenu';
 
 export function useEnvelopeSheetName<
@@ -141,8 +143,12 @@ export function IncomeHeaderMonth() {
 export const ExpenseGroupMonth = memo(function ExpenseGroupMonth({
   month,
   group,
+  editing = false,
+  onEdit,
+  onBudgetAction,
 }: CategoryGroupMonthProps) {
   const { id } = group;
+  const isGroupBudgetingEnabled = useFeatureFlag('groupBudgeting');
 
   return (
     <View
@@ -154,16 +160,26 @@ export const ExpenseGroupMonth = memo(function ExpenseGroupMonth({
           : theme.budgetHeaderOtherMonth,
       }}
     >
-      <EnvelopeSheetCell
-        name="budgeted"
-        width="flex"
-        textAlign="right"
-        style={{ fontWeight: 600, ...styles.tnum }}
-        valueProps={{
-          binding: envelopeBudget.groupBudgeted(id),
-          type: 'financial',
-        }}
-      />
+      {isGroupBudgetingEnabled && onEdit && onBudgetAction ? (
+        <EnvelopeGroupBudgetedCell
+          month={month}
+          group={group}
+          editing={editing}
+          onEdit={onEdit}
+          onBudgetAction={onBudgetAction}
+        />
+      ) : (
+        <EnvelopeSheetCell
+          name="budgeted"
+          width="flex"
+          textAlign="right"
+          style={{ fontWeight: 600, ...styles.tnum }}
+          valueProps={{
+            binding: envelopeBudget.groupBudgeted(id),
+            type: 'financial',
+          }}
+        />
+      )}
       <EnvelopeSheetCell
         name="spent"
         width="flex"

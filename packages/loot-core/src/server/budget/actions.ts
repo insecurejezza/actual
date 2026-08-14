@@ -9,7 +9,9 @@ import { getLocale } from '#shared/locale';
 import * as monthUtils from '#shared/months';
 import { integerToCurrency, safeNumber } from '#shared/util';
 import type { IntegerAmount } from '#shared/util';
-import type { CategoryEntity } from '#types/models';
+import type { CategoryEntity, CategoryGroupEntity } from '#types/models';
+
+import { ensureHeldCategory } from './held-category';
 
 export async function getSheetValue(
   sheetName: string,
@@ -150,6 +152,66 @@ export function setBudget({
     category,
     amount,
   });
+}
+
+// The sum of the group's category budgets for the month, excluding the amount
+// still held at the group itself.
+async function getDistributedAmount({
+  group,
+  month,
+  heldCategory,
+}: {
+  group: CategoryGroupEntity['id'];
+  month: string;
+  heldCategory: CategoryEntity['id'];
+}): Promise<number> {
+  const table = getBudgetTable();
+  const budgets = await db.all<
+    Pick<db.DbZeroBudget | db.DbReflectBudget, 'amount'>
+  >(
+    `SELECT b.amount AS amount
+       FROM ${table} b
+       LEFT JOIN categories c ON b.category = c.id
+      WHERE b.month = ? AND c.cat_group = ? AND c.tombstone = 0 AND c.id != ?`,
+    [dbMonth(month), group, heldCategory],
+  );
+
+  return budgets.reduce((total, { amount }) => total + (amount || 0), 0);
+}
+
+/**
+ * Budget a total to a category group. The typed amount is the whole Group
+ * Budgeted number, so what lands on the Held Category is whatever is left once
+ * the child category budgets are accounted for — negative if the children are
+ * already budgeted past the total.
+ *
+ * Returns the group's Held Category, which the caller needs to read
+ * To Distribute back out.
+ */
+export async function setGroupBudget({
+  group,
+  month,
+  amount,
+}: {
+  group: CategoryGroupEntity['id'];
+  month: string;
+  amount: unknown;
+}): Promise<CategoryEntity['id']> {
+  const total = safeNumber(typeof amount === 'number' ? amount : 0);
+  const heldCategory = await ensureHeldCategory(group);
+  const distributed = await getDistributedAmount({
+    group,
+    month,
+    heldCategory,
+  });
+
+  await setBudget({
+    category: heldCategory,
+    month,
+    amount: total - distributed,
+  });
+
+  return heldCategory;
 }
 
 export function setGoal({ month, category, goal, long_goal }): Promise<void> {

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { send } from '@actual-app/core/platform/client/connection';
+import { heldCategoryPrefKey } from '@actual-app/core/shared/group-budget';
 import type { IntegerAmount } from '@actual-app/core/shared/util';
 import type {
   CategoryEntity,
@@ -14,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { pushModal } from '#modals/modalsSlice';
 import { addNotification } from '#notifications/notificationsSlice';
 import type { Notification } from '#notifications/notificationsSlice';
+import { mergeSyncedPrefs } from '#prefs/prefsSlice';
 import { useDispatch } from '#redux';
 import type { AppDispatch } from '#redux/store';
 
@@ -603,6 +605,14 @@ type ApplyBudgetActionPayload =
       };
     }
   | {
+      type: 'group-budget-amount';
+      month: string;
+      args: {
+        group: CategoryGroupEntity['id'];
+        amount: number;
+      };
+    }
+  | {
       type: 'copy-last';
       month: string;
       args?: never;
@@ -773,6 +783,21 @@ export function useBudgetActions() {
             amount: args.amount,
           });
           return null;
+        case 'group-budget-amount': {
+          const heldCategoryId = await send('budget/set-group-budget', {
+            month,
+            group: args.group,
+            amount: args.amount,
+          });
+          // The Held Category is created lazily on the server, so pull its
+          // marker into the client's prefs to show To Distribute right away.
+          dispatch(
+            mergeSyncedPrefs({
+              [heldCategoryPrefKey(args.group)]: heldCategoryId,
+            }),
+          );
+          return null;
+        }
         case 'copy-last':
           await send('budget/copy-previous-month', { month });
           return null;

@@ -23,6 +23,7 @@ import * as goalNoteActions from './template-notes';
 
 export type BudgetHandlers = {
   'budget/budget-amount': typeof actions.setBudget;
+  'budget/set-group-budget': typeof actions.setGroupBudget;
   'budget/copy-previous-month': typeof actions.copyPreviousMonth;
   'budget/copy-single-month': typeof actions.copySinglePreviousMonth;
   'budget/set-zero': typeof actions.setZero;
@@ -72,6 +73,10 @@ export type BudgetHandlers = {
 export const app = createApp<BudgetHandlers>();
 
 app.method('budget/budget-amount', mutator(undoable(actions.setBudget)));
+app.method(
+  'budget/set-group-budget',
+  mutator(undoable(actions.setGroupBudget)),
+);
 app.method(
   'budget/copy-previous-month',
   mutator(undoable(actions.copyPreviousMonth)),

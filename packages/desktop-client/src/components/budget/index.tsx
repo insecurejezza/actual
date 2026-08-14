@@ -279,6 +279,10 @@ export type CategoryMonthProps = {
 export type CategoryGroupMonthProps = {
   month: string;
   group: CategoryGroupEntity;
+  // Only used by group budgeting, where the Budgeted cell is editable.
+  editing?: boolean;
+  onEdit?: (id: CategoryGroupEntity['id'] | null, month?: string) => void;
+  onBudgetAction?: (month: string, action: string, arg: unknown) => void;
 };
 
 export type BudgetComponents = {
