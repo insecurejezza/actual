@@ -44,6 +44,22 @@ Once the stack exists, a deploy is:
 5. rsync the bundle to the Umbrel web-root folder; verify at the production URL.
 6. **Rollback** = restore the pre-deploy backup + unset `ACTUAL_WEB_ROOT` (falls back to the image's stock UI).
 
+## Agent skills
+
+_(This block would normally live in `CLAUDE.md`/`AGENTS.md`, but those are upstream-tracked; the runbook is the fork-owned equivalent.)_
+
+### Issue tracker
+
+Issues and specs live as GitHub Issues on `insecurejezza/actual` (via `gh`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+
 ## "Update Actual" (manual trigger only)
 
 1. `git fetch upstream --tags`; identify the new release tag.
