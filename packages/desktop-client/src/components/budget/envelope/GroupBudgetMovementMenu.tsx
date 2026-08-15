@@ -10,6 +10,8 @@ import { useUndo } from '#hooks/useUndo';
 
 import { DistributeMenu } from './DistributeMenu';
 import { GroupBudgetMenu } from './GroupBudgetMenu';
+import { GroupTransferMenu } from './GroupTransferMenu';
+import { ReturnToBudgetMenu } from './ReturnToBudgetMenu';
 
 type GroupBudgetMovementMenuProps = {
   group: CategoryGroupEntity;
@@ -19,9 +21,10 @@ type GroupBudgetMovementMenuProps = {
 };
 
 /**
- * The group Budgeted cell menu: the ways money leaves a group's To Distribute
- * for one of its categories. Both are neutral — Group Budgeted and To Budget
- * stay exactly where they are.
+ * The group Budgeted cell menu: every way money leaves a group's To Distribute.
+ * All of them are neutral — Group Budgeted and To Budget stay exactly where
+ * they are — except returning to To Budget, which is the one action that
+ * deliberately unbudgets the money.
  */
 export function GroupBudgetMovementMenu({
   group,
@@ -61,6 +64,8 @@ export function GroupBudgetMovementMenu({
             });
             onClose();
           }}
+          onTransferToGroup={() => setMenu('transfer-to-group')}
+          onReturnToBudget={() => setMenu('return-to-budget')}
         />
       )}
 
@@ -78,6 +83,44 @@ export function GroupBudgetMovementMenu({
             });
             showUndoNotification({
               message: t('Distributed from {{groupName}}.', {
+                groupName: group.name,
+              }),
+            });
+          }}
+        />
+      )}
+
+      {menu === 'transfer-to-group' && (
+        <GroupTransferMenu
+          group={group}
+          onClose={onClose}
+          onSubmit={(amount, toGroupId) => {
+            onBudgetAction(month, 'transfer-between-groups', {
+              fromGroup: group.id,
+              toGroup: toGroupId,
+              amount,
+              currencyCode: format.currency.code,
+            });
+            showUndoNotification({
+              message: t('Transferred from {{groupName}}.', {
+                groupName: group.name,
+              }),
+            });
+          }}
+        />
+      )}
+
+      {menu === 'return-to-budget' && (
+        <ReturnToBudgetMenu
+          onClose={onClose}
+          onSubmit={amount => {
+            onBudgetAction(month, 'return-to-budget-from-group', {
+              group: group.id,
+              amount,
+              currencyCode: format.currency.code,
+            });
+            showUndoNotification({
+              message: t('Returned to To Budget from {{groupName}}.', {
                 groupName: group.name,
               }),
             });

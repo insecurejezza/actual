@@ -657,6 +657,25 @@ type ApplyBudgetActionPayload =
       };
     }
   | {
+      type: 'transfer-between-groups';
+      month: string;
+      args: {
+        fromGroup: CategoryGroupEntity['id'];
+        toGroup: CategoryGroupEntity['id'];
+        amount: IntegerAmount;
+        currencyCode: string;
+      };
+    }
+  | {
+      type: 'return-to-budget-from-group';
+      month: string;
+      args: {
+        group: CategoryGroupEntity['id'];
+        amount: IntegerAmount;
+        currencyCode: string;
+      };
+    }
+  | {
       type: 'copy-last';
       month: string;
       args?: never;
@@ -860,6 +879,34 @@ export function useBudgetActions() {
             {
               month,
               group: args.group,
+              currencyCode: args.currencyCode,
+            },
+          );
+          mergeHeldCategoryPref(dispatch, args.group, heldCategoryId);
+          return null;
+        }
+        case 'transfer-between-groups': {
+          const { fromHeldCategory, toHeldCategory } = await send(
+            'budget/transfer-between-groups',
+            {
+              month,
+              fromGroup: args.fromGroup,
+              toGroup: args.toGroup,
+              amount: args.amount,
+              currencyCode: args.currencyCode,
+            },
+          );
+          mergeHeldCategoryPref(dispatch, args.fromGroup, fromHeldCategory);
+          mergeHeldCategoryPref(dispatch, args.toGroup, toHeldCategory);
+          return null;
+        }
+        case 'return-to-budget-from-group': {
+          const heldCategoryId = await send(
+            'budget/return-to-budget-from-group',
+            {
+              month,
+              group: args.group,
+              amount: args.amount,
               currencyCode: args.currencyCode,
             },
           );

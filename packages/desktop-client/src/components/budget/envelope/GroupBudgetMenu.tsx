@@ -10,12 +10,16 @@ type GroupBudgetMenuProps = Omit<
 > & {
   onDistribute: () => void;
   onCoverAllOverspending: () => void;
+  onTransferToGroup: () => void;
+  onReturnToBudget: () => void;
 };
 
 /** The actions available on a category group's Budgeted cell. */
 export function GroupBudgetMenu({
   onDistribute,
   onCoverAllOverspending,
+  onTransferToGroup,
+  onReturnToBudget,
   ...props
 }: GroupBudgetMenuProps) {
   const { t } = useTranslation();
@@ -31,6 +35,12 @@ export function GroupBudgetMenu({
           case 'cover-all-overspending':
             onCoverAllOverspending();
             break;
+          case 'transfer-to-group':
+            onTransferToGroup();
+            break;
+          case 'return-to-budget':
+            onReturnToBudget();
+            break;
           default:
             throw new Error(`Unrecognized menu option: ${String(name)}`);
         }
@@ -43,6 +53,14 @@ export function GroupBudgetMenu({
         {
           name: 'cover-all-overspending',
           text: t('Cover all overspending in this group'),
+        },
+        {
+          name: 'transfer-to-group',
+          text: t('Transfer to another group…'),
+        },
+        {
+          name: 'return-to-budget',
+          text: t('Return to To Budget…'),
         },
       ]}
     />
