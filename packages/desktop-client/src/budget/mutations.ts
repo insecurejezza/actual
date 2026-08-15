@@ -62,6 +62,24 @@ function dispatchCategoryNameAlreadyExistsNotification(
   );
 }
 
+/**
+ * The Held Category is created lazily on the server, so pull its marker into
+ * the client's prefs to show the group's To Distribute right away.
+ */
+function mergeHeldCategoryPref(
+  dispatch: AppDispatch,
+  groupId: CategoryGroupEntity['id'],
+  heldCategoryId: CategoryEntity['id'] | null,
+) {
+  if (!heldCategoryId) {
+    return;
+  }
+
+  dispatch(
+    mergeSyncedPrefs({ [heldCategoryPrefKey(groupId)]: heldCategoryId }),
+  );
+}
+
 export type BudgetTemplateNotification = Notification & {
   count?: number | undefined;
   sourceCount?: number | undefined;
@@ -613,6 +631,32 @@ type ApplyBudgetActionPayload =
       };
     }
   | {
+      type: 'distribute-from-group';
+      month: string;
+      args: {
+        group: CategoryGroupEntity['id'];
+        category: CategoryEntity['id'];
+        amount: IntegerAmount;
+        currencyCode: string;
+      };
+    }
+  | {
+      type: 'cover-from-group';
+      month: string;
+      args: {
+        category: CategoryEntity['id'];
+        currencyCode: string;
+      };
+    }
+  | {
+      type: 'cover-all-overspending-from-group';
+      month: string;
+      args: {
+        group: CategoryGroupEntity['id'];
+        currencyCode: string;
+      };
+    }
+  | {
       type: 'copy-last';
       month: string;
       args?: never;
@@ -789,13 +833,37 @@ export function useBudgetActions() {
             group: args.group,
             amount: args.amount,
           });
-          // The Held Category is created lazily on the server, so pull its
-          // marker into the client's prefs to show To Distribute right away.
-          dispatch(
-            mergeSyncedPrefs({
-              [heldCategoryPrefKey(args.group)]: heldCategoryId,
-            }),
+          mergeHeldCategoryPref(dispatch, args.group, heldCategoryId);
+          return null;
+        }
+        case 'distribute-from-group': {
+          const heldCategoryId = await send('budget/distribute-from-group', {
+            month,
+            group: args.group,
+            category: args.category,
+            amount: args.amount,
+            currencyCode: args.currencyCode,
+          });
+          mergeHeldCategoryPref(dispatch, args.group, heldCategoryId);
+          return null;
+        }
+        case 'cover-from-group':
+          await send('budget/cover-from-group', {
+            month,
+            category: args.category,
+            currencyCode: args.currencyCode,
+          });
+          return null;
+        case 'cover-all-overspending-from-group': {
+          const heldCategoryId = await send(
+            'budget/cover-all-overspending-from-group',
+            {
+              month,
+              group: args.group,
+              currencyCode: args.currencyCode,
+            },
           );
+          mergeHeldCategoryPref(dispatch, args.group, heldCategoryId);
           return null;
         }
         case 'copy-last':

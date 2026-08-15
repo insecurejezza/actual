@@ -18,12 +18,16 @@ import * as cleanupGroupActions from './cleanup-groups';
 import * as cleanupActions from './cleanup-template';
 import { storeNoteCleanups } from './cleanup-template-notes';
 import * as goalActions from './goal-template';
+import * as groupDistributionActions from './group-distribution';
 import { sortCategories } from './sort-categories';
 import * as goalNoteActions from './template-notes';
 
 export type BudgetHandlers = {
   'budget/budget-amount': typeof actions.setBudget;
   'budget/set-group-budget': typeof actions.setGroupBudget;
+  'budget/distribute-from-group': typeof groupDistributionActions.distributeFromGroup;
+  'budget/cover-from-group': typeof groupDistributionActions.coverFromGroup;
+  'budget/cover-all-overspending-from-group': typeof groupDistributionActions.coverAllOverspendingFromGroup;
   'budget/copy-previous-month': typeof actions.copyPreviousMonth;
   'budget/copy-single-month': typeof actions.copySinglePreviousMonth;
   'budget/set-zero': typeof actions.setZero;
@@ -76,6 +80,18 @@ app.method('budget/budget-amount', mutator(undoable(actions.setBudget)));
 app.method(
   'budget/set-group-budget',
   mutator(undoable(actions.setGroupBudget)),
+);
+app.method(
+  'budget/distribute-from-group',
+  mutator(undoable(groupDistributionActions.distributeFromGroup)),
+);
+app.method(
+  'budget/cover-from-group',
+  mutator(undoable(groupDistributionActions.coverFromGroup)),
+);
+app.method(
+  'budget/cover-all-overspending-from-group',
+  mutator(undoable(groupDistributionActions.coverAllOverspendingFromGroup)),
 );
 app.method(
   'budget/copy-previous-month',

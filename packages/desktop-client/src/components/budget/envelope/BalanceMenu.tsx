@@ -16,6 +16,12 @@ type BalanceMenuProps = Omit<
   onTransfer?: () => void;
   onCarryover?: (carryOver: boolean) => void;
   onCover?: () => void;
+  /**
+   * Cover this category's overspending straight out of its group's
+   * To Distribute. Only passed when the group has money held at the group
+   * level, so the item is absent otherwise.
+   */
+  onCoverFromGroup?: () => void;
 };
 
 export function BalanceMenu({
@@ -23,6 +29,7 @@ export function BalanceMenu({
   onTransfer,
   onCarryover,
   onCover,
+  onCoverFromGroup,
   ...props
 }: BalanceMenuProps) {
   const { t } = useTranslation();
@@ -47,6 +54,9 @@ export function BalanceMenu({
           case 'cover':
             onCover?.();
             break;
+          case 'cover-from-group':
+            onCoverFromGroup?.();
+            break;
           default:
             throw new Error(`Unrecognized menu option: ${name}`);
         }
@@ -65,6 +75,14 @@ export function BalanceMenu({
               {
                 name: 'cover',
                 text: t('Cover overspending'),
+              },
+            ]
+          : []),
+        ...(balance < 0 && onCoverFromGroup
+          ? [
+              {
+                name: 'cover-from-group',
+                text: t('Cover from group'),
               },
             ]
           : []),

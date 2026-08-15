@@ -629,9 +629,7 @@ export async function coverOverspending({
 
     await addMovementNotes({
       month,
-      amount: coverableAmount,
-      to,
-      from,
+      movements: [{ amount: coverableAmount, to, from }],
       currencyCode,
     });
   });
@@ -694,9 +692,9 @@ export async function coverOverbudgeted({
 
     await addMovementNotes({
       month,
-      amount: coverableAmount,
-      from: category,
-      to: 'overbudgeted',
+      movements: [
+        { amount: coverableAmount, from: category, to: 'overbudgeted' },
+      ],
       currencyCode,
     });
   });
@@ -730,9 +728,7 @@ export async function transferCategory({
 
     await addMovementNotes({
       month,
-      amount,
-      to,
-      from,
+      movements: [{ amount, to, from }],
       currencyCode,
     });
   });
@@ -786,25 +782,34 @@ function addNewLine(notes?: string) {
   return !notes ? '' : `${notes}\n`;
 }
 
-async function addMovementNotes({
-  month,
-  amount,
-  to,
-  from,
-  currencyCode,
-}: {
-  month: string;
+export type BudgetMovement = {
   amount: number;
   to: CategoryEntity['id'] | 'to-budget' | 'overbudgeted';
   from: CategoryEntity['id'] | 'to-budget';
+};
+
+/**
+ * Append one "Reassigned …" line to the month's budget notes per movement.
+ *
+ * Takes a list rather than a single movement because the notes row has to be
+ * written once per action: while messages are batched nothing is applied until
+ * the batch flushes, so reading the existing note back between two writes
+ * returns a stale value and the second write loses the first line.
+ */
+export async function addMovementNotes({
+  month,
+  movements,
+  currencyCode,
+}: {
+  month: string;
+  movements: BudgetMovement[];
   currencyCode: string;
 }) {
+  if (movements.length === 0) {
+    return;
+  }
+
   const currency = getCurrency(currencyCode);
-  const displayAmount = integerToCurrency(
-    amount,
-    undefined,
-    currency.decimalPlaces,
-  );
 
   const monthBudgetNotesId = `budget-${month}`;
   const existingMonthBudgetNotes = addNewLine(
@@ -821,26 +826,32 @@ async function addMovementNotes({
     locale,
   );
   const categories = await db.getCategories(
-    [from, to].filter(c => c !== 'to-budget' && c !== 'overbudgeted'),
+    [...new Set(movements.flatMap(({ from, to }) => [from, to]))].filter(
+      c => c !== 'to-budget' && c !== 'overbudgeted',
+    ),
   );
 
-  const fromCategoryName =
-    from === 'to-budget'
+  const categoryName = (id: BudgetMovement['to']) =>
+    id === 'to-budget'
       ? 'To Budget'
-      : categories.find(c => c.id === from)?.name;
-
-  const toCategoryName =
-    to === 'to-budget'
-      ? 'To Budget'
-      : to === 'overbudgeted'
+      : id === 'overbudgeted'
         ? 'Overbudgeted'
-        : categories.find(c => c.id === to)?.name;
+        : categories.find(c => c.id === id)?.name;
 
-  const note = `Reassigned ${displayAmount} from ${fromCategoryName} → ${toCategoryName} on ${displayDay}`;
+  const notes = movements
+    .map(({ amount, from, to }) => {
+      const displayAmount = integerToCurrency(
+        amount,
+        undefined,
+        currency.decimalPlaces,
+      );
+      return `- Reassigned ${displayAmount} from ${categoryName(from)} → ${categoryName(to)} on ${displayDay}`;
+    })
+    .join('\n');
 
   await db.update('notes', {
     id: monthBudgetNotesId,
-    note: `${existingMonthBudgetNotes}- ${note}`,
+    note: `${existingMonthBudgetNotes}${notes}`,
   });
 }
 

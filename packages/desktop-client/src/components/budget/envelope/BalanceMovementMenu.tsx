@@ -1,6 +1,13 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { heldCategoryPrefKey } from '@actual-app/core/shared/group-budget';
+
+import { useCategory } from '#hooks/useCategory';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useFormat } from '#hooks/useFormat';
+import { useSyncedPref } from '#hooks/useSyncedPref';
+import { useUndo } from '#hooks/useUndo';
 import { envelopeBudget } from '#spreadsheet/bindings';
 
 import { BalanceMenu } from './BalanceMenu';
@@ -21,10 +28,21 @@ export function BalanceMovementMenu({
   onBudgetAction,
   onClose,
 }: BalanceMovementMenuProps) {
+  const { t } = useTranslation();
   const format = useFormat();
+  const { showUndoNotification } = useUndo();
 
   const catBalance =
     useEnvelopeSheetValue(envelopeBudget.catBalance(categoryId)) ?? 0;
+
+  const isGroupBudgetingEnabled = useFeatureFlag('groupBudgeting');
+  const { data: category } = useCategory(categoryId);
+  const [heldCategoryId] = useSyncedPref(
+    heldCategoryPrefKey(category?.group ?? ''),
+  );
+  // Covering from the group only makes sense once the group holds money of its
+  // own, which is exactly when it has a Held Category.
+  const canCoverFromGroup = Boolean(isGroupBudgetingEnabled && heldCategoryId);
 
   const [menu, _setMenu] = useState('menu');
 
@@ -52,6 +70,20 @@ export function BalanceMovementMenu({
           }}
           onTransfer={() => setMenu('transfer')}
           onCover={() => setMenu('cover')}
+          onCoverFromGroup={
+            canCoverFromGroup
+              ? () => {
+                  onBudgetAction(month, 'cover-from-group', {
+                    category: categoryId,
+                    currencyCode: format.currency.code,
+                  });
+                  showUndoNotification({
+                    message: t('Covered overspending from the group.'),
+                  });
+                  onClose();
+                }
+              : undefined
+          }
         />
       )}
 
