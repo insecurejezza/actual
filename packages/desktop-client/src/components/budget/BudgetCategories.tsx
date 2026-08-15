@@ -3,6 +3,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
+import { withoutHeldCategoriesInGroups } from '@actual-app/core/shared/group-budget';
 import type {
   CategoryEntity,
   CategoryGroupEntity,
@@ -11,6 +12,7 @@ import type {
 import { DropHighlightPosContext } from '#components/sort';
 import type { DragState, OnDropCallback } from '#components/sort';
 import { Row } from '#components/table';
+import { useHeldCategoryIds } from '#hooks/useHeldCategoryIds';
 import { useLocalPref } from '#hooks/useLocalPref';
 
 import { ExpenseCategory } from './ExpenseCategory';
@@ -80,6 +82,7 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
     const [collapsedGroupIds = [], setCollapsedGroupIdsPref] =
       useLocalPref('budget.collapsed');
     const [showHiddenCategories] = useLocalPref('budget.showHiddenCategories');
+    const heldCategoryIds = useHeldCategoryIds();
     function onCollapse(value: Array<CategoryGroupEntity['id']>) {
       setCollapsedGroupIdsPref(value);
     }
@@ -89,7 +92,12 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
       string | null
     >(null);
     const items: BudgetItem[] = useMemo(() => {
-      const [expenseGroups, incomeGroup] = separateGroups(categoryGroups);
+      // A Held Category holds its group's To Distribute, which the group's own
+      // row already shows. It never gets a row of its own, not even with
+      // hidden categories shown.
+      const [expenseGroups, incomeGroup] = separateGroups(
+        withoutHeldCategoriesInGroups(categoryGroups, heldCategoryIds),
+      );
 
       let items: BudgetItem[] = Array.prototype.concat.apply(
         [],
@@ -161,6 +169,7 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
     }, [
       categoryGroups,
       collapsedGroupIds,
+      heldCategoryIds,
       newCategoryForGroup,
       isAddingGroup,
       showHiddenCategories,

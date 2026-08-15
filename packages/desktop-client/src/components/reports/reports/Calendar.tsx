@@ -49,7 +49,7 @@ import type { TableHandleRef } from '#components/table';
 import { TransactionList } from '#components/transactions/TransactionList';
 import { useAccounts } from '#hooks/useAccounts';
 import { SchedulesProvider } from '#hooks/useCachedSchedules';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useDashboardWidget } from '#hooks/useDashboardWidget';
 import { useDateFormat } from '#hooks/useDateFormat';
 import { DisplayPayeeProvider } from '#hooks/useDisplayPayee';
@@ -119,7 +119,7 @@ function CalendarInner({ widget, parameters }: CalendarInnerProps) {
   const { data: accounts = [] } = useAccounts();
   const { data: payees = [] } = usePayees();
   const { data: { grouped: categoryGroups } = { grouped: [] } } =
-    useCategories();
+    useVisibleCategories();
 
   const [_firstDayOfWeekIdx] = useSyncedPref('firstDayOfWeekIdx');
   const firstDayOfWeekIdx = _firstDayOfWeekIdx || '0';

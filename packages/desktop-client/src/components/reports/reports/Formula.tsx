@@ -19,7 +19,7 @@ import { MobileBackButton } from '#components/mobile/MobileBackButton';
 import { MobilePageHeader, Page, PageHeader } from '#components/Page';
 import { FormulaResult } from '#components/reports/FormulaResult';
 import { LoadingIndicator } from '#components/reports/LoadingIndicator';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useDashboardWidget } from '#hooks/useDashboardWidget';
 import { useFormulaExecution } from '#hooks/useFormulaExecution';
 import { useNavigate } from '#hooks/useNavigate';
@@ -66,7 +66,7 @@ function FormulaInner({ widget }: FormulaInnerProps) {
       list: [],
       grouped: [],
     },
-  } = useCategories();
+  } = useVisibleCategories();
 
   const [formula, setFormula] = useState(
     widget?.meta?.formula || '=SUM(1, 2, 3)',

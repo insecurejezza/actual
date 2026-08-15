@@ -38,6 +38,7 @@ import { useReport } from '#components/reports/useReport';
 import { fromDateRepr } from '#components/reports/util';
 import { useDashboardWidget } from '#hooks/useDashboardWidget';
 import { useFormat } from '#hooks/useFormat';
+import { useHeldCategoryIds } from '#hooks/useHeldCategoryIds';
 import { useLocale } from '#hooks/useLocale';
 import { useNavigate } from '#hooks/useNavigate';
 import { useRuleConditionFilters } from '#hooks/useRuleConditionFilters';
@@ -174,6 +175,7 @@ function BudgetAnalysisInternal({ widget }: BudgetAnalysisInternalProps) {
   const [showCategories, setShowCategories] = useState(
     !(widget?.meta?.balanceOnly ?? false),
   );
+  const heldCategoryIds = useHeldCategoryIds();
   const [showHiddenCategories, setShowHiddenCategories] = useState(
     widget?.meta?.showHiddenCategories ?? false,
   );
@@ -271,8 +273,16 @@ function BudgetAnalysisInternal({ widget }: BudgetAnalysisInternalProps) {
         startDate,
         endDate,
         showHiddenCategories,
+        heldCategoryIds,
       }),
-    [conditions, conditionsOp, startDate, endDate, showHiddenCategories],
+    [
+      conditions,
+      conditionsOp,
+      startDate,
+      endDate,
+      showHiddenCategories,
+      heldCategoryIds,
+    ],
   );
 
   const data = useReport('default', getGraphData);

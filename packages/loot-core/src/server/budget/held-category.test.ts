@@ -7,6 +7,8 @@ import * as budget from './base';
 import {
   ensureHeldCategory,
   getHeldCategoryId,
+  getHeldCategoryIds,
+  getHeldCategoryLabels,
   heldCategoryPrefKey,
   isHeldCategory,
 } from './held-category';
@@ -153,5 +155,95 @@ describe('Held Category', () => {
     });
 
     expect(await getHeldCategoryId('group2')).toBeNull();
+  });
+});
+
+describe('getHeldCategoryIds', () => {
+  beforeEach(global.emptyDatabase());
+  afterEach(global.emptyDatabase());
+
+  it('is empty when no group has ever been funded', async () => {
+    await setupDatabase();
+
+    expect(await getHeldCategoryIds()).toEqual(new Set());
+  });
+
+  it("collects every group's Held Category in one pass", async () => {
+    await setupDatabase();
+    await db.insertCategoryGroup({
+      id: 'group2',
+      name: 'group2',
+      is_income: 0,
+    });
+
+    const held1 = await ensureHeldCategory('group1');
+    const held2 = await ensureHeldCategory('group2');
+
+    expect(await getHeldCategoryIds()).toEqual(new Set([held1, held2]));
+  });
+
+  it('drops a marker whose category was deleted', async () => {
+    await setupDatabase();
+    const heldCategoryId = await ensureHeldCategory('group1');
+
+    await db.deleteCategory({ id: heldCategoryId });
+
+    expect(await getHeldCategoryIds()).toEqual(new Set());
+  });
+
+  it('drops a marker whose group was deleted', async () => {
+    await setupDatabase();
+    await ensureHeldCategory('group1');
+
+    await db.deleteCategoryGroup({ id: 'group1' });
+
+    expect(await getHeldCategoryIds()).toEqual(new Set());
+  });
+
+  it('ignores a marker pointing at a category in another group', async () => {
+    await setupDatabase();
+    await db.insertCategoryGroup({
+      id: 'group2',
+      name: 'group2',
+      is_income: 0,
+    });
+    await db.update('preferences', {
+      id: heldCategoryPrefKey('group2'),
+      value: 'cat1',
+    });
+
+    expect(await getHeldCategoryIds()).toEqual(new Set());
+  });
+});
+
+describe('getHeldCategoryLabels', () => {
+  beforeEach(global.emptyDatabase());
+  afterEach(global.emptyDatabase());
+
+  it('qualifies each Held Category with its group', async () => {
+    await setupDatabase();
+    const heldCategoryId = await ensureHeldCategory('group1');
+
+    expect(await getHeldCategoryLabels()).toEqual(
+      new Map([[heldCategoryId, 'To Distribute (group1)']]),
+    );
+  });
+
+  it('labels a renamed Held Category by its current name', async () => {
+    await setupDatabase();
+    const heldCategoryId = await ensureHeldCategory('group1');
+
+    await db.update('categories', { id: heldCategoryId, name: 'Unallocated' });
+
+    expect((await getHeldCategoryLabels()).get(heldCategoryId)).toBe(
+      'Unallocated (group1)',
+    );
+  });
+
+  it('has no label for an ordinary category', async () => {
+    await setupDatabase();
+    await ensureHeldCategory('group1');
+
+    expect((await getHeldCategoryLabels()).has('cat1')).toBe(false);
   });
 });

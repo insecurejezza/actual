@@ -11,7 +11,7 @@ import { integerToCurrency, safeNumber } from '#shared/util';
 import type { IntegerAmount } from '#shared/util';
 import type { CategoryEntity, CategoryGroupEntity } from '#types/models';
 
-import { ensureHeldCategory } from './held-category';
+import { ensureHeldCategory, getHeldCategoryLabels } from './held-category';
 
 export async function getSheetValue(
   sheetName: string,
@@ -831,12 +831,17 @@ export async function addMovementNotes({
     ),
   );
 
+  // A Held Category is labelled with its group, because its own name says
+  // nothing about which group's To Distribute moved.
+  const heldCategoryLabels = await getHeldCategoryLabels();
+
   const categoryName = (id: BudgetMovement['to']) =>
     id === 'to-budget'
       ? 'To Budget'
       : id === 'overbudgeted'
         ? 'Overbudgeted'
-        : categories.find(c => c.id === id)?.name;
+        : (heldCategoryLabels.get(id) ??
+          categories.find(c => c.id === id)?.name);
 
   const notes = movements
     .map(({ amount, from, to }) => {

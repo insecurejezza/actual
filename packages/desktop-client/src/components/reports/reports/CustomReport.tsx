@@ -56,7 +56,7 @@ import { createGroupedSpreadsheet } from '#components/reports/spreadsheets/group
 import { useReport } from '#components/reports/useReport';
 import { calculateHasWarning, fromDateRepr } from '#components/reports/util';
 import { useAccounts } from '#hooks/useAccounts';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useFormat } from '#hooks/useFormat';
 import { useLocale } from '#hooks/useLocale';
 import { useLocalPref } from '#hooks/useLocalPref';
@@ -147,7 +147,8 @@ function CustomReportInner({
   const { t } = useTranslation();
   const format = useFormat();
 
-  const { data: categories = { grouped: [], list: [] } } = useCategories();
+  const { data: categories = { grouped: [], list: [] } } =
+    useVisibleCategories();
   const { isNarrowWidth } = useResponsive();
   const [_firstDayOfWeekIdx] = useSyncedPref('firstDayOfWeekIdx');
   const firstDayOfWeekIdx = _firstDayOfWeekIdx || '0';

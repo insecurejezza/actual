@@ -39,7 +39,7 @@ import { createCrossoverSpreadsheet } from '#components/reports/spreadsheets/cro
 import type { CrossoverData } from '#components/reports/spreadsheets/crossover-spreadsheet';
 import { useReport } from '#components/reports/useReport';
 import { useAccounts } from '#hooks/useAccounts';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useDashboardWidget } from '#hooks/useDashboardWidget';
 import { useFormat } from '#hooks/useFormat';
 import { useLocale } from '#hooks/useLocale';
@@ -79,7 +79,7 @@ function CrossoverInner({ widget }: CrossoverInnerProps) {
   const {
     data: categories = { grouped: [], list: [] },
     isPending: isCategoriesLoading,
-  } = useCategories();
+  } = useVisibleCategories();
   const format = useFormat();
 
   const expenseCategoryGroups = categories.grouped.filter(

@@ -17,6 +17,7 @@ import { Text } from '@actual-app/components/text';
 import { TextOneLine } from '@actual-app/components/text-one-line';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
+import { withoutHeldCategoriesInGroups } from '@actual-app/core/shared/group-budget';
 import { integerToCurrency } from '@actual-app/core/shared/util';
 import type {
   CategoryEntity,
@@ -28,6 +29,7 @@ import { useEnvelopeSheetValue } from '#components/budget/envelope/EnvelopeBudge
 import { makeAmountFullStyle } from '#components/budget/util';
 import { FinancialText } from '#components/FinancialText';
 import { useCategories } from '#hooks/useCategories';
+import { useHeldCategoryIds } from '#hooks/useHeldCategoryIds';
 import { useSheetValue } from '#hooks/useSheetValue';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { envelopeBudget, trackingBudget } from '#spreadsheet/bindings';
@@ -217,8 +219,15 @@ export function CategoryAutocomplete({
 }: CategoryAutocompleteProps) {
   const { data: { grouped: defaultCategoryGroups } = { grouped: [] } } =
     useCategories();
+  // Held Categories are never offered, however the caller sourced its groups
+  // and whatever `showHiddenCategories` says: money put on one would just be
+  // its group's To Distribute again.
+  const heldCategoryIds = useHeldCategoryIds();
   const categorySuggestions: CategoryAutocompleteItem[] = useMemo(() => {
-    const allSuggestions = (categoryGroups || defaultCategoryGroups).reduce(
+    const allSuggestions = withoutHeldCategoriesInGroups(
+      categoryGroups || defaultCategoryGroups,
+      heldCategoryIds,
+    ).reduce(
       (list, group) =>
         list.concat(
           (group.categories || [])
@@ -245,6 +254,7 @@ export function CategoryAutocomplete({
   }, [
     categoryGroups,
     defaultCategoryGroups,
+    heldCategoryIds,
     showSplitOption,
     showHiddenCategories,
   ]);

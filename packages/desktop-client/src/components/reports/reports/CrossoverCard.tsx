@@ -23,7 +23,7 @@ import { defaultTimeFrame } from '#components/reports/reports/Crossover';
 import { createCrossoverSpreadsheet } from '#components/reports/spreadsheets/crossover-spreadsheet';
 import type { CrossoverData } from '#components/reports/spreadsheets/crossover-spreadsheet';
 import { useReport } from '#components/reports/useReport';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useFormat } from '#hooks/useFormat';
 import { useLocale } from '#hooks/useLocale';
 
@@ -44,7 +44,8 @@ export function CrossoverCard({
 }: CrossoverCardProps) {
   const locale = useLocale();
   const { t } = useTranslation();
-  const { data: categories = { grouped: [], list: [] } } = useCategories();
+  const { data: categories = { grouped: [], list: [] } } =
+    useVisibleCategories();
   const { isNarrowWidth } = useResponsive();
 
   const [nameMenuOpen, setNameMenuOpen] = useState(false);

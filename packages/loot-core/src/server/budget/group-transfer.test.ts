@@ -148,7 +148,7 @@ describe('transferBetweenGroups', () => {
     ).toBe(12000);
   });
 
-  it('records a reassignment note', async () => {
+  it('records a reassignment note naming both groups', async () => {
     await setupDatabase();
     await setGroupBudget({ group: 'group1', month: '2024-01', amount: 30000 });
     await sheet.waitOnSpreadsheet();
@@ -162,7 +162,11 @@ describe('transferBetweenGroups', () => {
     });
     await sheet.waitOnSpreadsheet();
 
-    expect(await getMonthNotes('2024-01')).toMatch(/Reassigned 120\.00 from /);
+    // Both ends are Held Categories, so the bare category names would read
+    // "from To Distribute → To Distribute".
+    expect(await getMonthNotes('2024-01')).toMatch(
+      /Reassigned 120\.00 from To Distribute \(group1\) → To Distribute \(group2\)/,
+    );
   });
 
   it('may drive the sending group To Distribute negative', async () => {
@@ -302,7 +306,7 @@ describe('returnToBudgetFromGroup', () => {
     await sheet.waitOnSpreadsheet();
 
     expect(await getMonthNotes('2024-01')).toMatch(
-      /Reassigned 120\.00 from To Distribute → To Budget/,
+      /Reassigned 120\.00 from To Distribute \(group1\) → To Budget/,
     );
   });
 

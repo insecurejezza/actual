@@ -34,7 +34,10 @@ type createBudgetAnalysisSpreadsheetProps = {
   startDate: string;
   endDate: string;
   showHiddenCategories?: boolean;
+  heldCategoryIds?: ReadonlySet<CategoryEntity['id']>;
 };
+
+const NO_HELD_CATEGORIES: ReadonlySet<CategoryEntity['id']> = new Set();
 
 export function isBaseCategory(
   cat: CategoryEntity,
@@ -49,6 +52,7 @@ export function createBudgetAnalysisSpreadsheet({
   startDate,
   endDate,
   showHiddenCategories = false,
+  heldCategoryIds = NO_HELD_CATEGORIES,
 }: createBudgetAnalysisSpreadsheetProps) {
   return async (
     spreadsheet: ReturnType<typeof useSpreadsheet>,
@@ -75,8 +79,12 @@ export function createBudgetAnalysisSpreadsheet({
 
     // Base set: expense categories only; hidden categories are included when
     // showHiddenCategories is true so historic data is not misrepresented.
-    const baseCategories = allCategories.filter((cat: CategoryEntity) =>
-      isBaseCategory(cat, showHiddenCategories),
+    // A Held Category is left out either way — it holds its group's
+    // To Distribute rather than being something the user budgets against.
+    const baseCategories = allCategories.filter(
+      (cat: CategoryEntity) =>
+        isBaseCategory(cat, showHiddenCategories) &&
+        !heldCategoryIds.has(cat.id),
     );
 
     let categoriesToInclude: CategoryEntity[];

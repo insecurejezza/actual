@@ -47,7 +47,7 @@ import {
 import type { Graph } from '#components/reports/spreadsheets/sankey-spreadsheet';
 import { useReport } from '#components/reports/useReport';
 import { fromDateRepr } from '#components/reports/util';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useDashboardWidget } from '#hooks/useDashboardWidget';
 import { useFormatList } from '#hooks/useFormatList';
 import { useLocale } from '#hooks/useLocale';
@@ -561,7 +561,7 @@ function SankeyInner({ widget }: SankeyInnerProps) {
   }
 
   const { data: { grouped: groupedCategories = [] } = { grouped: [] } } =
-    useCategories();
+    useVisibleCategories();
 
   const baseGraphParams = useMemo(() => {
     if (!datesInitialized) {

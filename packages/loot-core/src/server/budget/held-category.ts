@@ -53,6 +53,55 @@ export async function isHeldCategory(
   return row != null;
 }
 
+type HeldCategoryRow = {
+  id: CategoryEntity['id'];
+  name: string;
+  group_id: CategoryGroupEntity['id'];
+  group_name: string;
+  marked_group_id: CategoryGroupEntity['id'];
+};
+
+/**
+ * Every live Held Category, resolved from the markers in one query so that
+ * list-wide checks do not turn into one lookup per category.
+ *
+ * Applies the same rules as {@link getHeldCategoryId} one group at a time: a
+ * marker only counts while it points at a category that still exists and still
+ * sits in the group that marked it.
+ */
+async function getHeldCategories(): Promise<HeldCategoryRow[]> {
+  const rows = await db.all<HeldCategoryRow>(
+    `SELECT c.id AS id, c.name AS name, c.cat_group AS group_id,
+            g.name AS group_name,
+            SUBSTR(p.id, ?) AS marked_group_id
+       FROM preferences p
+       JOIN categories c ON c.id = p.value AND c.tombstone = 0
+       JOIN category_groups g ON g.id = c.cat_group AND g.tombstone = 0
+      WHERE p.id LIKE ?`,
+    [HELD_CATEGORY_PREF_PREFIX.length + 1, `${HELD_CATEGORY_PREF_PREFIX}%`],
+  );
+
+  return rows.filter(row => row.marked_group_id === row.group_id);
+}
+
+/** The ids of every group's Held Category. */
+export async function getHeldCategoryIds(): Promise<Set<CategoryEntity['id']>> {
+  const rows = await getHeldCategories();
+  return new Set(rows.map(({ id }) => id));
+}
+
+/**
+ * A display label per Held Category, qualified by its group. "To Distribute"
+ * on its own is ambiguous the moment two groups' To Distribute appear in the
+ * same sentence, as they do in a group-to-group shift's month note.
+ */
+export async function getHeldCategoryLabels(): Promise<
+  Map<CategoryEntity['id'], string>
+> {
+  const rows = await getHeldCategories();
+  return new Map(rows.map(row => [row.id, `${row.name} (${row.group_name})`]));
+}
+
 async function findAvailableName(
   groupId: CategoryGroupEntity['id'],
 ): Promise<string> {

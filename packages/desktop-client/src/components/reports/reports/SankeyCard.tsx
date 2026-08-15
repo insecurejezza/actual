@@ -28,7 +28,7 @@ import type {
   GraphLayers,
 } from '#components/reports/spreadsheets/sankey-spreadsheet';
 import { useReport } from '#components/reports/useReport';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { useLocale } from '#hooks/useLocale';
 import { useResizeObserver } from '#hooks/useResizeObserver';
 
@@ -48,7 +48,7 @@ export function SankeyCard({
   const locale = useLocale();
   const [nameMenuOpen, setNameMenuOpen] = useState(false);
   const { data: { grouped: groupedCategories = [] } = { grouped: [] } } =
-    useCategories();
+    useVisibleCategories();
 
   const [start, end] = calculateTimeRange(meta?.timeFrame);
   const mode = meta?.mode ?? 'spent';

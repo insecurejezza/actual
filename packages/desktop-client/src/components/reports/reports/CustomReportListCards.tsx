@@ -16,7 +16,7 @@ import { ReportCard } from '#components/reports/ReportCard';
 import { ReportCardName } from '#components/reports/ReportCardName';
 import { calculateHasWarning } from '#components/reports/util';
 import { useAccounts } from '#hooks/useAccounts';
-import { useCategories } from '#hooks/useCategories';
+import { useVisibleCategories } from '#hooks/useCategories';
 import { usePayees } from '#hooks/usePayees';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { addNotification } from '#notifications/notificationsSlice';
@@ -73,7 +73,8 @@ function CustomReportListCardsInner({
 
   const { data: payees = [] } = usePayees();
   const { data: accounts = [] } = useAccounts();
-  const { data: categories = { list: [], grouped: [] } } = useCategories();
+  const { data: categories = { list: [], grouped: [] } } =
+    useVisibleCategories();
 
   const hasWarning = calculateHasWarning(report.conditions ?? [], {
     categories: categories.list,

@@ -156,7 +156,7 @@ describe('distributeFromGroup', () => {
     await sheet.waitOnSpreadsheet();
 
     expect(await getMonthNotes('2024-01')).toMatch(
-      /Reassigned 120\.00 from To Distribute → cat1/,
+      /Reassigned 120\.00 from To Distribute \(group1\) → cat1/,
     );
   });
 
@@ -314,7 +314,7 @@ describe('coverFromGroup', () => {
     await sheet.waitOnSpreadsheet();
 
     expect(await getMonthNotes('2024-01')).toMatch(
-      /Reassigned 45\.00 from To Distribute → cat1/,
+      /Reassigned 45\.00 from To Distribute \(group1\) → cat1/,
     );
   });
 });
@@ -441,8 +441,12 @@ describe('coverAllOverspendingFromGroup', () => {
     await sheet.waitOnSpreadsheet();
 
     const notes = await getMonthNotes('2024-01');
-    expect(notes).toMatch(/Reassigned 45\.00 from To Distribute → cat1/);
-    expect(notes).toMatch(/Reassigned 25\.00 from To Distribute → cat2/);
+    expect(notes).toMatch(
+      /Reassigned 45\.00 from To Distribute \(group1\) → cat1/,
+    );
+    expect(notes).toMatch(
+      /Reassigned 25\.00 from To Distribute \(group1\) → cat2/,
+    );
   });
 
   it('does nothing when the group has no overspending', async () => {

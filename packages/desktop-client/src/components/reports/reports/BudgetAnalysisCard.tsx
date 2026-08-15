@@ -19,6 +19,7 @@ import { calculateTimeRange } from '#components/reports/reportRanges';
 import { createBudgetAnalysisSpreadsheet } from '#components/reports/spreadsheets/budget-analysis-spreadsheet';
 import { useReport } from '#components/reports/useReport';
 import { useFormat } from '#hooks/useFormat';
+import { useHeldCategoryIds } from '#hooks/useHeldCategoryIds';
 
 type BudgetAnalysisCardProps = {
   widgetId: string;
@@ -51,6 +52,8 @@ export function BudgetAnalysisCard({
     monthUtils.monthFromDate(endMonth) + '-01',
   );
 
+  const heldCategoryIds = useHeldCategoryIds();
+
   const getGraphData = useMemo(() => {
     return createBudgetAnalysisSpreadsheet({
       conditions: meta?.conditions,
@@ -58,6 +61,7 @@ export function BudgetAnalysisCard({
       startDate,
       endDate,
       showHiddenCategories: meta?.showHiddenCategories ?? false,
+      heldCategoryIds,
     });
   }, [
     meta?.conditions,
@@ -65,6 +69,7 @@ export function BudgetAnalysisCard({
     meta?.showHiddenCategories,
     startDate,
     endDate,
+    heldCategoryIds,
   ]);
 
   const data = useReport('default', getGraphData);
