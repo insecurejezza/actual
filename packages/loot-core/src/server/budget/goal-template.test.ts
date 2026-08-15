@@ -27,6 +27,12 @@ vi.mock('#server/db', () => ({
   first: vi.fn(),
 }));
 
+// No group has a Held Category here; the bulk run's carve-out for them is
+// covered against a real database in group-automation.test.ts.
+vi.mock('./held-category', () => ({
+  getHeldCategoryIds: vi.fn(async () => new Set<string>()),
+}));
+
 vi.mock('#server/aql', () => ({
   aqlQuery: vi.fn(),
 }));

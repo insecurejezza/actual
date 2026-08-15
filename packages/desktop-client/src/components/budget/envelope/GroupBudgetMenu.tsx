@@ -3,6 +3,9 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Menu } from '@actual-app/components/menu';
+import type { MenuItem } from '@actual-app/components/menu';
+
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 
 type GroupBudgetMenuProps = Omit<
   ComponentPropsWithoutRef<typeof Menu>,
@@ -12,6 +15,7 @@ type GroupBudgetMenuProps = Omit<
   onCoverAllOverspending: () => void;
   onTransferToGroup: () => void;
   onReturnToBudget: () => void;
+  onEditAutomations: () => void;
 };
 
 /** The actions available on a category group's Budgeted cell. */
@@ -20,9 +24,26 @@ export function GroupBudgetMenu({
   onCoverAllOverspending,
   onTransferToGroup,
   onReturnToBudget,
+  onEditAutomations,
   ...props
 }: GroupBudgetMenuProps) {
   const { t } = useTranslation();
+
+  // A group automation is an ordinary budget automation on the group's bucket,
+  // so it is offered exactly where a category's automations are: behind both
+  // template flags.
+  const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const isGoalTemplatesUIEnabled = useFeatureFlag('goalTemplatesUIEnabled');
+  const canEditAutomations = isGoalTemplatesEnabled && isGoalTemplatesUIEnabled;
+  const automationItems: MenuItem[] = canEditAutomations
+    ? [
+        Menu.line,
+        {
+          name: 'edit-automations',
+          text: t('Budget automations…'),
+        },
+      ]
+    : [];
 
   return (
     <Menu
@@ -40,6 +61,9 @@ export function GroupBudgetMenu({
             break;
           case 'return-to-budget':
             onReturnToBudget();
+            break;
+          case 'edit-automations':
+            onEditAutomations();
             break;
           default:
             throw new Error(`Unrecognized menu option: ${String(name)}`);
@@ -62,6 +86,7 @@ export function GroupBudgetMenu({
           name: 'return-to-budget',
           text: t('Return to To Budget…'),
         },
+        ...automationItems,
       ]}
     />
   );

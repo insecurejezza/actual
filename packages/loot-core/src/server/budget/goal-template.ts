@@ -11,6 +11,7 @@ import type { Template } from '#types/models/templates';
 import { getSheetValue, isTrackingBudget, setBudget, setGoal } from './actions';
 import { CategoryTemplateContext } from './category-template-context';
 import { tombstoneOrphanCleanupGroups } from './cleanup-groups';
+import { getHeldCategoryIds } from './held-category';
 import { checkTemplateNotes, storeNoteTemplates } from './template-notes';
 import type { TemplateNotification } from './template-notification';
 
@@ -142,7 +143,17 @@ async function getCategories(): Promise<CategoryEntity[]> {
   const { data: categoryGroups }: { data: CategoryGroupEntity[] } =
     await aqlQuery(q('category_groups').filter({ hidden: false }).select('*'));
 
-  return categoryGroups.flatMap(g => g.categories || []).filter(c => !c.hidden);
+  // A Held Category is hidden by construction — it is where a group parks its
+  // To Distribute, not something the user budgets against by name. Its
+  // template is that group's automation and has to run like any other, so the
+  // marker is the one thing that reopens the hidden gate. Held Categories are
+  // identified in bulk, never by name, and a hidden group still takes its Held
+  // Category out with it: hiding a group hides its budgeting whole.
+  const heldCategoryIds = await getHeldCategoryIds();
+
+  return categoryGroups
+    .flatMap(g => g.categories || [])
+    .filter(c => !c.hidden || heldCategoryIds.has(c.id));
 }
 
 async function getTemplates(

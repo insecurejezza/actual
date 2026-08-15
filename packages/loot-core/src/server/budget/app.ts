@@ -20,12 +20,14 @@ import { storeNoteCleanups } from './cleanup-template-notes';
 import * as goalActions from './goal-template';
 import * as groupDistributionActions from './group-distribution';
 import * as groupTransferActions from './group-transfer';
+import { ensureHeldCategory } from './held-category';
 import { sortCategories } from './sort-categories';
 import * as goalNoteActions from './template-notes';
 
 export type BudgetHandlers = {
   'budget/budget-amount': typeof actions.setBudget;
   'budget/set-group-budget': typeof actions.setGroupBudget;
+  'budget/ensure-held-category': typeof ensureGroupHeldCategory;
   'budget/distribute-from-group': typeof groupDistributionActions.distributeFromGroup;
   'budget/cover-from-group': typeof groupDistributionActions.coverFromGroup;
   'budget/cover-all-overspending-from-group': typeof groupDistributionActions.coverAllOverspendingFromGroup;
@@ -84,6 +86,10 @@ app.method(
   'budget/set-group-budget',
   mutator(undoable(actions.setGroupBudget)),
 );
+// Deliberately not undoable: this only creates the group's bucket so an
+// automation has somewhere to land, and an undo entry for what the user
+// experienced as opening a dialog would swallow their last real edit.
+app.method('budget/ensure-held-category', mutator(ensureGroupHeldCategory));
 app.method(
   'budget/distribute-from-group',
   mutator(undoable(groupDistributionActions.distributeFromGroup)),
@@ -212,6 +218,19 @@ app.method(
   'budget/create-cleanup-group',
   mutator(undoable(cleanupGroupActions.createCleanupGroup)),
 );
+
+/**
+ * The group's Held Category, created if the group has never been funded. The
+ * group's budget automation lives on it, and an automation can be written
+ * before there is ever any money to hold.
+ */
+async function ensureGroupHeldCategory({
+  group,
+}: {
+  group: CategoryGroupEntity['id'];
+}): Promise<CategoryEntity['id']> {
+  return await ensureHeldCategory(group);
+}
 
 // Server must return AQL entities not the raw DB data
 async function getCategories({ hidden }: { hidden?: boolean } = {}) {

@@ -194,6 +194,38 @@ export function useCreateCategoryMutation() {
   });
 }
 
+type EnsureHeldCategoryPayload = {
+  groupId: CategoryGroupEntity['id'];
+};
+
+/**
+ * Resolves the group's Held Category, creating it if the group has never been
+ * funded, and returns its id. A group's budget automation lives on that
+ * category, so it has to exist before the automation editor can open on it.
+ */
+export function useEnsureHeldCategoryMutation() {
+  const queryClient = useQueryClient();
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async ({ groupId }: EnsureHeldCategoryPayload) =>
+      await send('budget/ensure-held-category', { group: groupId }),
+    onSuccess: (heldCategoryId, { groupId }) => {
+      mergeHeldCategoryPref(dispatch, groupId, heldCategoryId);
+      invalidateQueries(queryClient);
+    },
+    onError: error => {
+      console.error('Error resolving the group budget category:', error);
+      dispatchErrorNotification(
+        dispatch,
+        t('There was an error opening the group automation. Please try again.'),
+        error,
+      );
+    },
+  });
+}
+
 type UpdateCategoryPayload = {
   category: CategoryEntity;
 };

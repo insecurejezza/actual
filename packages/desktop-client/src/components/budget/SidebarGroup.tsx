@@ -11,6 +11,7 @@ import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { Tooltip } from '@actual-app/components/tooltip';
 import { View } from '@actual-app/components/view';
+import { heldCategoryPrefKey } from '@actual-app/core/shared/group-budget';
 import type {
   CategoryEntity,
   CategoryGroupEntity,
@@ -22,6 +23,7 @@ import { InputCell } from '#components/table';
 import { useContextMenu } from '#hooks/useContextMenu';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useGlobalPref } from '#hooks/useGlobalPref';
+import { useSyncedPref } from '#hooks/useSyncedPref';
 
 type SidebarGroupProps = {
   group: CategoryGroupEntity;
@@ -63,6 +65,8 @@ export function SidebarGroup({
 }: SidebarGroupProps) {
   const { t } = useTranslation();
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const isGroupBudgetingEnabled = useFeatureFlag('groupBudgeting');
+  const [heldCategoryId] = useSyncedPref(heldCategoryPrefKey(group.id));
   const [categoryExpandedStatePref] = useGlobalPref('categoryExpandedState');
   const categoryExpandedState = categoryExpandedStatePref ?? 0;
 
@@ -105,9 +109,15 @@ export function SidebarGroup({
           name: 'apply-multiple-category-template',
           text: t('Overwrite with templates'),
           onClick: () =>
-            onApplyBudgetTemplatesInGroup(
-              group.categories.filter(c => !c.hidden).map(c => c.id),
-            ),
+            onApplyBudgetTemplatesInGroup([
+              ...group.categories.filter(c => !c.hidden).map(c => c.id),
+              // The group's own bucket is hidden and filtered out of the
+              // list above, but its automation is part of the group's
+              // budget — applying the group's templates has to fund it too.
+              ...(isGroupBudgetingEnabled && heldCategoryId
+                ? [heldCategoryId]
+                : []),
+            ]),
         },
     ],
   });

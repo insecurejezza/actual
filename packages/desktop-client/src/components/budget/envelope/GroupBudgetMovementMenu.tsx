@@ -4,9 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { heldCategoryPrefKey } from '@actual-app/core/shared/group-budget';
 import type { CategoryGroupEntity } from '@actual-app/core/types/models';
 
+import { useEnsureHeldCategoryMutation } from '#budget';
 import { useFormat } from '#hooks/useFormat';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { useUndo } from '#hooks/useUndo';
+import { pushModal } from '#modals/modalsSlice';
+import { useDispatch } from '#redux';
 
 import { DistributeMenu } from './DistributeMenu';
 import { GroupBudgetMenu } from './GroupBudgetMenu';
@@ -35,6 +38,8 @@ export function GroupBudgetMovementMenu({
   const { t } = useTranslation();
   const format = useFormat();
   const { showUndoNotification } = useUndo();
+  const dispatch = useDispatch();
+  const ensureHeldCategory = useEnsureHeldCategoryMutation();
 
   const [heldCategoryId] = useSyncedPref(heldCategoryPrefKey(group.id));
 
@@ -66,6 +71,28 @@ export function GroupBudgetMovementMenu({
           }}
           onTransferToGroup={() => setMenu('transfer-to-group')}
           onReturnToBudget={() => setMenu('return-to-budget')}
+          onEditAutomations={() => {
+            // The bucket has to exist before an automation can point at it,
+            // and a group can be automated long before it is ever funded.
+            // Awaiting the promise rather than passing a callback keeps the
+            // modal coming even though closing this popover unmounts us.
+            onClose();
+            ensureHeldCategory
+              .mutateAsync({ groupId: group.id })
+              .then(categoryId => {
+                dispatch(
+                  pushModal({
+                    modal: {
+                      name: 'category-automations-edit',
+                      options: { categoryId, month },
+                    },
+                  }),
+                );
+              })
+              .catch(() => {
+                // the mutation raises its own error notification
+              });
+          }}
         />
       )}
 
