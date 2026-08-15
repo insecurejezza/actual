@@ -9,6 +9,7 @@ import {
   getSyncError,
   getTestKeyError,
 } from '#shared/errors';
+import { withoutHeldCategories } from '#shared/group-budget';
 import * as monthUtils from '#shared/months';
 import { q } from '#shared/query';
 import {
@@ -39,6 +40,7 @@ import {
 import type { AmountOPType, APIScheduleEntity } from './api-models';
 import { aqlQuery } from './aql';
 import { isTrackingBudget } from './budget/actions';
+import { getHeldCategoryIds } from './budget/held-category';
 import * as cloudStorage from './cloud-storage';
 import type { RemoteFile } from './cloud-storage';
 import * as db from './db';
@@ -394,6 +396,7 @@ handlers['api/budget-month'] = async function ({ month }) {
     q('category_groups').select('*'),
   );
   const sheetName = monthUtils.sheetForMonth(month);
+  const heldCategoryIds = await getHeldCategoryIds();
 
   function value(name) {
     const v = sheet.get().getCellValue(sheetName, name);
@@ -445,19 +448,33 @@ handlers['api/budget-month'] = async function ({ month }) {
         };
       }
 
+      // Money budgeted to the group that has not been handed out to any of its
+      // categories yet. It is stored as the budget of the group's hidden Held
+      // Category, which is an implementation detail: it is reported as an
+      // amount on the group and left out of `categories`. `budgeted` already
+      // sums both, so it stays untouched — a group's total is always its
+      // To Distribute plus the budgets listed below it.
+      const categories = group.categories ?? [];
+      const heldCategory = categories.find(cat => heldCategoryIds.has(cat.id));
+
       return {
         ...categoryGroupModel.toExternal(group),
         budgeted: value(`group-budget-${group.id}`),
         spent: value(`group-sum-amount-${group.id}`),
         balance: value(`group-leftover-${group.id}`),
+        toDistribute: heldCategory
+          ? (value(`budget-${heldCategory.id}`) as number)
+          : 0,
 
-        categories: group.categories.map(cat => ({
-          ...categoryModel.toExternal(cat),
-          budgeted: value(`budget-${cat.id}`),
-          spent: value(`sum-amount-${cat.id}`),
-          balance: value(`leftover-${cat.id}`),
-          carryover: value(`carryover-${cat.id}`),
-        })),
+        categories: withoutHeldCategories(categories, heldCategoryIds).map(
+          cat => ({
+            ...categoryModel.toExternal(cat),
+            budgeted: value(`budget-${cat.id}`),
+            spent: value(`sum-amount-${cat.id}`),
+            balance: value(`leftover-${cat.id}`),
+            carryover: value(`carryover-${cat.id}`),
+          }),
+        ),
       };
     }),
   };
@@ -669,6 +686,11 @@ handlers['api/account-balance'] = withMutation(async function ({
   return handlers['account-balance']({ id, cutoff });
 });
 
+// Held Categories are deliberately included here: they are ordinary
+// categories, and hiding them from the flat list would break callers that
+// read a category list and write budgets back by id. The group budgeting
+// domain model — a group and its To Distribute — is only shaped in
+// `api/budget-month`.
 handlers['api/categories-get'] = async function ({
   hidden,
 }: { hidden?: boolean } = {}) {

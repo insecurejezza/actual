@@ -4,7 +4,9 @@ import { getBankSyncError } from '#shared/errors';
 import type { ServerHandlers } from '#types/server-handlers';
 
 import { installAPI } from './api';
+import { setBudget, setGroupBudget } from './budget/actions';
 import { createBudget } from './budget/base';
+import { getHeldCategoryId } from './budget/held-category';
 import * as prefs from './prefs';
 
 vi.mock('#shared/errors', () => ({
@@ -136,6 +138,141 @@ describe('API handlers', () => {
       expect(group?.categories?.[0]).toHaveProperty('received', 5000);
       expect(group?.categories?.[0]).toHaveProperty('balance', 1000);
       expect(group?.categories?.[0]).toHaveProperty('carryover', false);
+    });
+
+    describe('group budgeting', () => {
+      beforeEach(async () => {
+        await db.insertCategoryGroup({
+          id: 'expense-group',
+          name: 'Usual Expenses',
+          is_income: 0,
+        });
+        await db.insertCategory({
+          id: 'groceries',
+          name: 'Groceries',
+          cat_group: 'expense-group',
+          is_income: 0,
+        });
+      });
+
+      async function getExpenseGroup() {
+        const result = await handlers['api/budget-month']({ month: '2026-03' });
+        const group = result.categoryGroups.find(g => g.id === 'expense-group');
+        assert(group, 'Expected expense category group to exist');
+        return group;
+      }
+
+      it('reports the undistributed part of a group total as toDistribute', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await setBudget({
+          category: 'groceries',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await setGroupBudget({
+          group: 'expense-group',
+          month: '2026-03',
+          amount: 30000,
+        });
+        await sheet.waitOnSpreadsheet();
+
+        expect(await getExpenseGroup()).toHaveProperty('toDistribute', 10000);
+      });
+
+      it('hides the Held Category from the group categories', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await setGroupBudget({
+          group: 'expense-group',
+          month: '2026-03',
+          amount: 30000,
+        });
+        await sheet.waitOnSpreadsheet();
+
+        const heldCategoryId = await getHeldCategoryId('expense-group');
+        expect(heldCategoryId).not.toBeNull();
+
+        const group = await getExpenseGroup();
+        expect(group.categories?.map(category => category.id)).toEqual([
+          'groceries',
+        ]);
+      });
+
+      it('keeps the Held Category hidden once the group total is fully distributed', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await setGroupBudget({
+          group: 'expense-group',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await setBudget({
+          category: 'groceries',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await setGroupBudget({
+          group: 'expense-group',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await sheet.waitOnSpreadsheet();
+
+        const group = await getExpenseGroup();
+        expect(group).toHaveProperty('toDistribute', 0);
+        expect(group.categories?.map(category => category.id)).toEqual([
+          'groceries',
+        ]);
+      });
+
+      it('group budgeted equals toDistribute plus the listed child budgets', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await setBudget({
+          category: 'groceries',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await setGroupBudget({
+          group: 'expense-group',
+          month: '2026-03',
+          amount: 30000,
+        });
+        await sheet.waitOnSpreadsheet();
+
+        const group = await getExpenseGroup();
+        const childBudgeted = (group.categories ?? []).reduce(
+          (total, category) => total + Number(category.budgeted),
+          0,
+        );
+
+        expect(group.budgeted).toBe(Number(group.toDistribute) + childBudgeted);
+      });
+
+      it('reports toDistribute of 0 for a group that was never funded', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await setBudget({
+          category: 'groceries',
+          month: '2026-03',
+          amount: 20000,
+        });
+        await sheet.waitOnSpreadsheet();
+
+        const group = await getExpenseGroup();
+        expect(group).toHaveProperty('toDistribute', 0);
+        expect(group).toHaveProperty('budgeted', 20000);
+        expect(group.categories?.map(category => category.id)).toEqual([
+          'groceries',
+        ]);
+      });
+
+      it('does not report toDistribute for an income group', async () => {
+        await createBudget(['2026-02', '2026-03']);
+        await sheet.waitOnSpreadsheet();
+
+        const result = await handlers['api/budget-month']({ month: '2026-03' });
+        const group = result.categoryGroups.find(g => g.is_income);
+        assert(group, 'Expected income category group to exist');
+
+        expect(group).not.toHaveProperty('toDistribute');
+      });
     });
   });
 });

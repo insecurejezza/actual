@@ -72,7 +72,12 @@ export type ApiHandlers = {
     totalSpent: number;
     totalBalance: number;
     categoryGroups: Array<
-      Record<string, unknown> & { categories?: Record<string, unknown>[] }
+      Record<string, unknown> & {
+        categories?: Record<string, unknown>[];
+        // Expense groups only: the part of the group's total that has not been
+        // handed out to a category yet.
+        toDistribute?: number;
+      }
     >;
   }>;
 
